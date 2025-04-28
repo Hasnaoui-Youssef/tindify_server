@@ -31,11 +31,12 @@ export class MusicBrainzService {
         }))
     );
     if(resp.data.count == 0){
-      return "";
+      return { id : "" };
     }
     return resp.data.recordings[0];
   }
   async getUserTopTracksFeatures(mbids : string[]) : Promise<number[]> {
+    mbids = mbids.filter((item) => item.length !== 0);
     const queries : string[] = [];
     for (let i = 0; i < mbids.length; i+= this.batchSize){
       queries.push(mbids.slice(i, i + this.batchSize).join(":"));

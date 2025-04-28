@@ -1,0 +1,63 @@
+import { Injectable } from '@nestjs/common';
+import { MusicBrainzService } from '../music-brainz/music-brainz.service';
+import { InjectRepository } from '@nestjs/typeorm';
+import { User } from './entities/user.entity';
+import { DataSource, FindManyOptions, Repository } from 'typeorm';
+import { Photo } from './entities/photo.entity';
+import { CreateUserDTO } from './dto/create-user.dto';
+import pgvector from 'pgvector/pg';
+
+@Injectable()
+export class UserService{
+
+  constructor(
+    private mbService : MusicBrainzService,
+    @InjectRepository(User) private userRepo : Repository<User>,
+    @InjectRepository(Photo) private photoRepo : Repository<Photo>,
+    private dataSource : DataSource,
+  ){}
+
+  async createUser(createUserDto : CreateUserDTO) : Promise<User> {
+    const songMBIDs = await Promise.all(
+      createUserDto.songs.map((song) => {
+        return this.mbService.getSongMBID(song);
+      })
+    )
+    const embedding = await this.mbService.getUserTopTracksFeatures(songMBIDs.map(item => item.id));
+    return await this.dataSource.transaction(async (manager) => {
+      const user = manager.create(User, {
+        firstName : createUserDto.firstName,
+        lastName : createUserDto.lastName,
+        email : createUserDto.email,
+        embedding : pgvector.toSql(embedding),
+      });
+      const savedUser = await manager.save(User, user);
+      const photos = createUserDto.photos.map( (photo) => { return {...photo, user : savedUser}});
+      await manager.save(Photo, photos);
+      return savedUser;
+    })
+  }
+  async getUser(userId : number) {
+    return this.userRepo.findOneBy({id : userId});
+  }
+  async findAll() {
+    return this.userRepo.find();
+  }
+  async getUserSuggestions(userId : number, skips : number = 0) {
+    const user = await this.userRepo.findOne({
+      where : { id : userId },
+      select : ['embedding']
+    });
+    if(!user){
+      throw new Error("User not found");
+    }
+    const res = await this.userRepo.createQueryBuilder("users")
+      .where('id != :userId')
+      .orderBy('embedding <-> :embedding')
+      .setParameters({userId, embedding : pgvector.toSql(user.embedding)})
+      .limit(10)
+      .offset(skips * 10)
+      .getMany();
+    return res;
+  }
+}

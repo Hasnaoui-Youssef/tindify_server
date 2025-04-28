@@ -9,5 +9,6 @@ import { HttpModule } from '@nestjs/axios';
   ],
   controllers: [MusicBrainzController],
   providers: [MusicBrainzService],
+  exports : [MusicBrainzService]
 })
 export class MusicBrainzModule {}
