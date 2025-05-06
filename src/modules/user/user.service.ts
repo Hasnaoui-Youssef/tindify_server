@@ -38,7 +38,12 @@ export class UserService{
     })
   }
   async getUser(userId : number) {
-    return this.userRepo.findOneBy({id : userId});
+
+    const userWithPhotos = await this.userRepo.createQueryBuilder('user')
+      .leftJoinAndSelect(Photo, 'photo', 'photo.userId = user.id')
+      .where('user.id = :userId', {userId})
+      .getOne();
+    return userWithPhotos;
   }
   async findAll() {
     return this.userRepo.find();

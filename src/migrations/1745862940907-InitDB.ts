@@ -12,7 +12,7 @@ export class InitDB1745862940907 implements MigrationInterface {
           "email" VARCHAR NOT NULL,
           "embedding" VECTOR(355)
           )
-      `);
+      `); // TODO add location
       await queryRunner.query(`
         CREATE TABLE "photo" (
           "id" SERIAL PRIMARY KEY,
