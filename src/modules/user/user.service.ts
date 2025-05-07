@@ -5,7 +5,7 @@ import { User } from './entities/user.entity';
 import { DataSource, FindManyOptions, Repository } from 'typeorm';
 import { Photo } from './entities/photo.entity';
 import { CreateUserDTO } from './dto/create-user.dto';
-import pgvector from 'pgvector/pg';
+import * as pgvector from 'pgvector/pg';
 
 @Injectable()
 export class UserService{
@@ -56,13 +56,23 @@ export class UserService{
     if(!user){
       throw new Error("User not found");
     }
+    const embArr = user.embedding.replace("[","").replace("]","").split(",").map((e)=>+e);
     const res = await this.userRepo.createQueryBuilder("users")
       .where('id != :userId')
       .orderBy('embedding <-> :embedding')
-      .setParameters({userId, embedding : pgvector.toSql(user.embedding)})
+      .setParameters({userId, embedding : pgvector.toSql(embArr)})
       .limit(10)
       .offset(skips * 10)
       .getMany();
     return res;
+  }
+  async getMatches(userId : number) {
+    return this.userRepo
+      .createQueryBuilder("user")
+      .innerJoin("user_matches", "match",
+        `("match"."user_id1" = "user"."id" AND "match"."user_id2" = :userId) OR ("match"."user_id2" = "user"."id" AND "match"."user_id1" = :userId)`, {userId}
+      )
+      .where(`"user"."id" != :userId`, {userId})
+      .getMany();
   }
 }

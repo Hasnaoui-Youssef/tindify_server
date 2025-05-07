@@ -5,14 +5,16 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { User } from './entities/user.entity';
 import { Photo } from './entities/photo.entity';
 import { MusicBrainzModule } from '../music-brainz/music-brainz.module';
+import { Like } from './entities/like.entity';
+import { LikeService } from './like/like.service';
 
 @Module({
   imports : [
-    TypeOrmModule.forFeature([User, Photo]),
+    TypeOrmModule.forFeature([User, Photo, Like]),
     MusicBrainzModule,
   ],
   controllers: [UserController],
-  providers: [UserService],
+  providers: [UserService, LikeService],
   exports : [TypeOrmModule],
 })
 export class UserModule {}

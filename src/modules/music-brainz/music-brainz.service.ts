@@ -24,7 +24,7 @@ export class MusicBrainzService {
   async getSongMBID(songName : string){
     const resp = await firstValueFrom(
       this.httpService
-        .get<SongQueryDTO>(`${this.musicBrainzBaseUrl}/recording/?query=recording:${songName}`)
+        .get<SongQueryDTO>(`${this.musicBrainzBaseUrl}/recording/?query=recording:${songName}&fmt=json`)
         .pipe(catchError((error : AxiosError) => {
           this.logger.error(error.message);
           throw "Unable to get song data";
@@ -39,7 +39,7 @@ export class MusicBrainzService {
     mbids = mbids.filter((item) => item.length !== 0);
     const queries : string[] = [];
     for (let i = 0; i < mbids.length; i+= this.batchSize){
-      queries.push(mbids.slice(i, i + this.batchSize).join(":"));
+      queries.push(mbids.slice(i, i + this.batchSize).join(";"));
     }
     const respArr = await Promise.all(queries.map(async (query) => {
       return firstValueFrom(
@@ -50,17 +50,21 @@ export class MusicBrainzService {
           throw "Unable to get features for songs";
         }))
       );
-    }))
-    const resp : AcousticBrainzResponse = {};
+    }));
+    const resp : any = {};
     for (const r of respArr){
       for(const [key, val] of Object.entries(r.data)){
         if(key !== "mbid_mapping") resp[key] = val;
       }
     }
+    if(!resp){
+      throw new Error("Unable to get any song please retry");
+    }
     const dataVector : number[][] = [];
     for(const id of mbids){
-      const record = resp.data[id];
-      if(!record || !record.highlevel) continue;
+      if(!(id in resp)) continue;
+      const record = resp[id]["0"];
+      if(!record.highlevel) continue;
       const recordVector : number[] = [];
       for(const [field, details] of Object.entries(record.highlevel)){
         if(field === "metadata" || !details || typeof details !== "object") continue;
@@ -71,6 +75,9 @@ export class MusicBrainzService {
         }
         dataVector.push(recordVector);
       }
+    }
+    if(dataVector.length === 0) {
+      throw new Error("user vector has no values");
     }
     const userData : number[] = processFeatures(dataVector);
     this.logger.log(userData);

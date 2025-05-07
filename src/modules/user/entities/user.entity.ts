@@ -1,4 +1,4 @@
-import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from "typeorm";
+import { Column, Entity, JoinTable, ManyToMany, OneToMany, PrimaryGeneratedColumn } from "typeorm";
 import { Photo } from "./photo.entity";
 
 @Entity()
@@ -20,4 +20,12 @@ export class User {
 
   @Column()
   embedding : string;
+
+  @ManyToMany(() => User)
+  @JoinTable({
+    name : "user_matches",
+    joinColumn : { name : "user_id1" },
+    inverseJoinColumn: { name : "user_id2" }
+  })
+  matches : User[];
 }

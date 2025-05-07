@@ -15,18 +15,20 @@ import { PGVectorService } from './configModules/pgVector.service';
     }),
     TypeOrmModule.forRootAsync({
         imports : [ConfigModule],
-        useFactory : (config : ConfigService) => ({
-        type : 'postgres',
-        host : config.get("DB_HOST"),
-        port : +(config.get("DB_HOST") ?? 3306),
-        username : config.get("DB_USERNAME"),
-        password : config.get("DB_PASSWORD"),
-        database : config.get("DB_NAME"),
-        autoLoadEntities : true,
-        migrations : ['dist/migrations/*.ts'],
-        synchronize  : false,
-        migrationsRun : true
-        }),
+        useFactory : (config : ConfigService) => {
+            return ({
+                type: 'postgres',
+                host: '127.0.0.1',
+                port: +(config.get("DB_PORT") ?? 5432),
+                username: config.get("DB_USERNAME"),
+                password: config.get("DB_PASSWORD"),
+                database: config.get("DB_NAME"),
+                autoLoadEntities: true,
+                migrations: ['dist/migrations/*.ts'],
+                synchronize: false,
+                migrationsRun: true
+            });
+        },
         inject : [ConfigService],
     }),
     SpotifyModule,
